@@ -1,0 +1,44 @@
+{
+  "geometry": {
+    "borehole_diameter_m": 0.278,
+    "casing_diameter_m": 0.245,
+    "tool_diameter_m": 0.073,
+    "source_to_rx1_m": 1.0,
+    "rx1_to_rx2_m": 0.5
+  },
+  "medium": {
+    "fluid_velocity_m_s": 1500.0,
+    "casing_velocity_m_s": 5000.0,
+    "formation_velocity_m_s": 3500.0,
+    "fluid_attenuation_neper_m": 0.4,
+    "casing_attenuation_neper_m": 0.15,
+    "formation_attenuation_neper_m": 0.2
+  },
+  "source": {
+    "t0_s": 0.0005
+  },
+  "simulation": {
+    "duration_s": 0.01,
+    "sample_rate_hz": 200000.0
+  },
+  "paths": [
+    {
+      "label": "fluid",
+      "velocity_m_s": 1500.0,
+      "attenuation_neper_m": 0.4,
+      "coupling": 1.0
+    },
+    {
+      "label": "casing",
+      "velocity_m_s": 5000.0,
+      "attenuation_neper_m": 0.15,
+      "coupling": 0.35
+    },
+    {
+      "label": "formation",
+      "velocity_m_s": 3500.0,
+      "attenuation_neper_m": 0.2,
+      "coupling": 0.25
+    }
+  ]
+}
