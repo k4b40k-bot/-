@@ -28,7 +28,19 @@ class Geometry:
 @dataclass(frozen=True)
 class Medium:
     fluid_velocity_m_s: float = 1500.0
-    attenuation_neper_m: float = 0.4
+    casing_velocity_m_s: float = 5000.0
+    formation_velocity_m_s: float = 3500.0
+    fluid_attenuation_neper_m: float = 0.4
+    casing_attenuation_neper_m: float = 0.15
+    formation_attenuation_neper_m: float = 0.2
+
+
+@dataclass(frozen=True)
+class WavePath:
+    label: str
+    velocity_m_s: float
+    attenuation_neper_m: float
+    coupling: float
 
 
 @dataclass(frozen=True)
@@ -71,6 +83,14 @@ def synthesize_signal(
     return [amplitude * source.pulse(t - travel_time_s) for t in times]
 
 
+def build_paths(medium: Medium) -> Tuple[WavePath, WavePath, WavePath]:
+    return (
+        WavePath("fluid", medium.fluid_velocity_m_s, medium.fluid_attenuation_neper_m, 1.0),
+        WavePath("casing", medium.casing_velocity_m_s, medium.casing_attenuation_neper_m, 0.35),
+        WavePath("formation", medium.formation_velocity_m_s, medium.formation_attenuation_neper_m, 0.25),
+    )
+
+
 def model_signals(
     geometry: Geometry,
     medium: Medium,
@@ -82,14 +102,21 @@ def model_signals(
     rx1_distance = geometry.source_to_rx1_m
     rx2_distance = geometry.source_to_rx1_m + geometry.rx1_to_rx2_m
 
-    rx1_time = arrival_time(rx1_distance, medium.fluid_velocity_m_s)
-    rx2_time = arrival_time(rx2_distance, medium.fluid_velocity_m_s)
+    rx1_signal = [0.0 for _ in times]
+    rx2_signal = [0.0 for _ in times]
 
-    rx1_amp = apply_attenuation(1.0, rx1_distance, medium.attenuation_neper_m)
-    rx2_amp = apply_attenuation(1.0, rx2_distance, medium.attenuation_neper_m)
+    for path in build_paths(medium):
+        rx1_time = arrival_time(rx1_distance, path.velocity_m_s)
+        rx2_time = arrival_time(rx2_distance, path.velocity_m_s)
 
-    rx1_signal = synthesize_signal(times, source, rx1_time, rx1_amp)
-    rx2_signal = synthesize_signal(times, source, rx2_time, rx2_amp)
+        rx1_amp = apply_attenuation(path.coupling, rx1_distance, path.attenuation_neper_m)
+        rx2_amp = apply_attenuation(path.coupling, rx2_distance, path.attenuation_neper_m)
+
+        rx1_component = synthesize_signal(times, source, rx1_time, rx1_amp)
+        rx2_component = synthesize_signal(times, source, rx2_time, rx2_amp)
+
+        rx1_signal = [a + b for a, b in zip(rx1_signal, rx1_component)]
+        rx2_signal = [a + b for a, b in zip(rx2_signal, rx2_component)]
 
     return times, rx1_signal, rx2_signal
 
@@ -166,7 +193,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--duration", type=float, default=0.01, help="Simulation duration (s).")
     parser.add_argument("--sample-rate", type=float, default=200_000.0, help="Sample rate (Hz).")
     parser.add_argument("--fluid-velocity", type=float, default=1500.0, help="Fluid P-wave velocity (m/s).")
-    parser.add_argument("--attenuation", type=float, default=0.4, help="Attenuation (neper/m).")
+    parser.add_argument("--casing-velocity", type=float, default=5000.0, help="Casing wave velocity (m/s).")
+    parser.add_argument("--formation-velocity", type=float, default=3500.0, help="Formation wave velocity (m/s).")
+    parser.add_argument("--fluid-attenuation", type=float, default=0.4, help="Fluid attenuation (neper/m).")
+    parser.add_argument("--casing-attenuation", type=float, default=0.15, help="Casing attenuation (neper/m).")
+    parser.add_argument(
+        "--formation-attenuation",
+        type=float,
+        default=0.2,
+        help="Formation attenuation (neper/m).",
+    )
     parser.add_argument("--t0", type=float, default=0.0005, help="Pulse T0 (s).")
     parser.add_argument("--csv", default="signals.csv", help="Output CSV path.")
     parser.add_argument("--plot", default="", help="Optional plot output path (SVG).")
@@ -178,7 +214,14 @@ def main() -> None:
     args = parse_args()
 
     geometry = Geometry()
-    medium = Medium(fluid_velocity_m_s=args.fluid_velocity, attenuation_neper_m=args.attenuation)
+    medium = Medium(
+        fluid_velocity_m_s=args.fluid_velocity,
+        casing_velocity_m_s=args.casing_velocity,
+        formation_velocity_m_s=args.formation_velocity,
+        fluid_attenuation_neper_m=args.fluid_attenuation,
+        casing_attenuation_neper_m=args.casing_attenuation,
+        formation_attenuation_neper_m=args.formation_attenuation,
+    )
     source = Source(t0_s=args.t0)
     simulation = Simulation(duration_s=args.duration, sample_rate_hz=args.sample_rate)
 

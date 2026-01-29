@@ -19,8 +19,8 @@ configuration (source + two receivers).
 
 ## Model assumptions
 
-- Only the **direct fluid wave** is modeled.
-- The fluid P-wave velocity and attenuation are configurable.
+- The signal is a **sum of three physical wave paths**: fluid, casing, and formation.
+- Each path uses its own velocity and attenuation, plus a coupling coefficient.
 - Amplitude includes geometric spreading (`1/r`) and exponential attenuation.
 
 You can extend the model with additional wave modes (casing, formation,
@@ -39,7 +39,11 @@ python acoustic_model.py \
   --duration 0.01 \
   --sample-rate 200000 \
   --fluid-velocity 1500 \
-  --attenuation 0.4 \
+  --casing-velocity 5000 \
+  --formation-velocity 3500 \
+  --fluid-attenuation 0.4 \
+  --casing-attenuation 0.15 \
+  --formation-attenuation 0.2 \
   --t0 0.0005 \
   --csv signals.csv \
   --plot waveform.svg \
